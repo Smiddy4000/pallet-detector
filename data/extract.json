@@ -1,0 +1,33 @@
+{
+"analyzeResult": {
+    "content": "REG 1590\nIllawarra Road\nAG\nCTNs\nAG\nCTNs\nRt:181148391\n1\n5\n3\n2\n3\n55\n3\n3\n2\nMIX\n69\nTot Wgt:684.47 Assg:LST000004110472 User : 3546 Desp Dte: 14/11/24\n:barcode: 195410000048874426\nCD : 4426\nPOS: 1 L NE:LNF149\n:barcode:\n1 93 10175 70032 1 :barcode:\nGROSS WEIGHT 5.6KG QUOML BOTTLES\n19339687065957\nSt : 1\nOrders\n9731197\nWH: 1953\nmua\nĒ: 240610",
+    "pages": [
+        {
+            "pageNumber": 1,
+            "angle": 0.5069894194602966,
+            "width": 1200,
+            "height": 1600,
+            "unit": "pixel",
+            "words": [
+                {
+                    "content": "REG",
+                    "polygon": [
+                        310,
+                        469,
+                        430,
+                        469,
+                        430,
+                        522,
+                        310,
+                        522
+                    ],
+                    "confidence": 0.99,
+                    "span": {
+                        "offset": 0,
+                        "length": 3
+                    }
+                }
+            }
+        ],
+    }
+}
