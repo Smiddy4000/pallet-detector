@@ -5,6 +5,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Azure.Cosmos;
 using System.ComponentModel.DataAnnotations;
+using Azure.Core;
+using Azure.Identity;
 
 
 namespace api
@@ -19,7 +21,8 @@ namespace api
         public GetLocation(ILogger<GetLocation> logger, IConfiguration config)
         {
             _logger = logger;
-            _cosmosClient = new CosmosClient(config["CosmosDBConnectionString"]);
+            TokenCredential credential = new DefaultAzureCredential();
+            _cosmosClient = new CosmosClient(config["CosmosDBConnectionString"], credential);
             _databaseId = config["CosmosDBDatabaseId"] ?? string.Empty;
             _containerId = config["CosmosDBContainerId"] ?? string.Empty;
         }
