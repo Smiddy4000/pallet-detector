@@ -1,0 +1,13 @@
+# Azure Developer CLI configuration for azd deployment
+name: pallet-detector
+metadata:
+  template: custom-bicep
+services:
+  api:
+    project: ./src/api
+    language: dotnet
+    host: function
+  webapp:
+    project: ./src
+    language: js
+    host: appservice
