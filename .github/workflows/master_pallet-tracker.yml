@@ -29,12 +29,6 @@ jobs:
           npm run build --if-present
           npm run test --if-present
 
-      - name: Archive production build
-        run: |
-          mkdir build
-          cp -r dist/* build/
-          cp server.js package.json package-lock.json build/
-      
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
