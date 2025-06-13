@@ -53,6 +53,5 @@ jobs:
         id: deploy-to-webapp
         with:
           app-name: 'pallet-tracker'
-          slot-name: 'Production'
           package: .
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_C82B9B60566B4C8284977A905F2C6CA6 }}
