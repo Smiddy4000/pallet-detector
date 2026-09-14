@@ -69,7 +69,7 @@ namespace api
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Barcode extraction failed.");
-                return new BadRequestObjectResult("Invalid image request.");
+                return new ObjectResult("Barcode extraction failed.") { StatusCode = StatusCodes.Status502BadGateway };
             }
         }
     }

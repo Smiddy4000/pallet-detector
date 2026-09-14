@@ -9,7 +9,33 @@ export function requiredEnvironmentVariable(name: string): string {
 }
 
 export function isAuthenticated(req: NextApiRequest): boolean {
-    return process.env.NODE_ENV !== 'production' || typeof req.headers['x-ms-client-principal'] === 'string';
+    if (process.env.NODE_ENV !== 'production') {
+        return true;
+    }
+
+    const encodedPrincipal = req.headers['x-ms-client-principal'];
+    if (typeof encodedPrincipal !== 'string') {
+        return false;
+    }
+
+    try {
+        const principal = JSON.parse(Buffer.from(encodedPrincipal, 'base64').toString('utf8'));
+        return typeof principal.auth_typ === 'string'
+            && principal.auth_typ.length > 0
+            && Array.isArray(principal.claims)
+            && principal.claims.some((claim: unknown) => {
+                if (!claim || typeof claim !== 'object') {
+                    return false;
+                }
+                const typedClaim = claim as { typ?: unknown; val?: unknown };
+                return typeof typedClaim.typ === 'string'
+                    && typeof typedClaim.val === 'string'
+                    && typedClaim.val.length > 0
+                    && /(?:objectidentifier|nameidentifier|oid|sub)$/.test(typedClaim.typ);
+            });
+    } catch {
+        return false;
+    }
 }
 
 export function forwardFunctionRequest(path: string, init?: RequestInit): Promise<Response> {

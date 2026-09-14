@@ -83,7 +83,10 @@ const CameraComponent: React.FC<CameraComponentProps> = ({ onResult }) => {
         if (!response.ok) {
             throw new Error('Image processing failed');
         }
-        const data: string = await response.json();
+        const data: unknown = await response.json();
+        if (typeof data !== 'string') {
+            throw new Error('Unexpected image processing response');
+        }
         setResponseText(data || 'No response message');
         setProgress(75);
         // create a regular expression to grab the barcode from the response
@@ -92,6 +95,9 @@ const CameraComponent: React.FC<CameraComponentProps> = ({ onResult }) => {
         const match = data.match(barcodeRegex);
         // extract the barcode value from the match
         const barcode = match ? match[1] : '';
+        if (!barcode) {
+            throw new Error('No barcode found');
+        }
         const responseLocation = await fetch(`/api/location?id=${encodeURIComponent(barcode)}`);
         if (!responseLocation.ok) {
             throw new Error('Location lookup failed');

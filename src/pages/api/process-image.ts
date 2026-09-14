@@ -1,7 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { forwardFunctionRequest, isAuthenticated } from '../../utils/serverApi';
 
-const MAX_IMAGE_LENGTH = 7_000_000;
+const IMAGE_PREFIX = 'data:image/jpeg;base64,';
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const MAX_IMAGE_LENGTH = IMAGE_PREFIX.length + (Math.ceil(MAX_IMAGE_BYTES / 3) * 4);
 
 export const config = {
     api: {
@@ -21,7 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const photo = req.body?.photo;
-    if (typeof photo !== 'string' || !photo.startsWith('data:image/jpeg;base64,') || photo.length > MAX_IMAGE_LENGTH) {
+    if (typeof photo !== 'string' || !photo.startsWith(IMAGE_PREFIX) || photo.length > MAX_IMAGE_LENGTH) {
         return res.status(400).json({ error: 'Invalid image data' });
     }
 
