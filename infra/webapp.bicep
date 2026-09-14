@@ -83,7 +83,7 @@ resource authSettings 'Microsoft.Web/sites/config@2024-04-01' = {
         enabled: true
         registration: {
           clientId: authClientId
-          openIdIssuer: 'https://login.microsoftonline.com/${tenant().tenantId}/v2.0'
+          openIdIssuer: '${environment().authentication.loginEndpoint}${tenant().tenantId}/v2.0'
         }
         validation: {
           allowedAudiences: [

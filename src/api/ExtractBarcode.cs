@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
-using Azure;
 using Azure.AI.FormRecognizer.DocumentAnalysis;
 using System.Text;
 using Microsoft.Extensions.Configuration;
