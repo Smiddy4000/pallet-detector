@@ -8,6 +8,7 @@ param functionApiBaseUrl string
 param authClientId string
 @secure()
 param functionApiKey string
+param subnetId string
 
 var webAppName = 'palletdetector${environmentName}webapp'
 var planName = 'palletdetector${environmentName}webplan'
@@ -39,6 +40,7 @@ resource webApp 'Microsoft.Web/sites@2024-04-01' = {
   properties: {
     serverFarmId: plan.id
     keyVaultReferenceIdentity: identityId
+    virtualNetworkSubnetId: subnetId
     siteConfig: {
       appSettings: [
         {

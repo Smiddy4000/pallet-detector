@@ -39,8 +39,8 @@ resource plan 'Microsoft.Web/serverfarms@2024-04-01' = {
   name: planName
   location: location
   sku: {
-    name: 'Y1'
-    tier: 'Dynamic'
+    name: 'EP1'
+    tier: 'ElasticPremium'
   }
   kind: 'functionapp'
 }
@@ -62,6 +62,7 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
   properties: {
     serverFarmId: plan.id
     keyVaultReferenceIdentity: identityId
+    virtualNetworkSubnetId: subnetId
     siteConfig: {
       appSettings: [
         {
@@ -103,8 +104,14 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
   }
 }
 
+resource functionHost 'Microsoft.Web/sites/host@2024-04-01' existing = {
+  parent: functionApp
+  name: 'default'
+}
+
 resource functionApiHostKey 'Microsoft.Web/sites/host/functionKeys@2024-04-01' = {
-  name: '${functionApp.name}/default/pallet-detector'
+  parent: functionHost
+  name: 'pallet-detector'
   properties: {
     name: 'pallet-detector'
     value: functionApiKey

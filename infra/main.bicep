@@ -18,7 +18,8 @@ var keyVaultName = '${resourcePrefix}${environmentName}kv'
 var logAnalyticsName = '${resourcePrefix}${environmentName}log'
 var appInsightsName = '${resourcePrefix}${environmentName}ai'
 var vnetName = '${resourcePrefix}${environmentName}vnet'
-var subnetName = '${resourcePrefix}${environmentName}subnet'
+var functionSubnetName = '${resourcePrefix}${environmentName}funcsubnet'
+var webSubnetName = '${resourcePrefix}${environmentName}websubnet'
 var identityName = '${resourcePrefix}${environmentName}id'
 
 // VNET and subnet for private endpoints
@@ -31,10 +32,44 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-09-01' = {
     }
     subnets: [
       {
-        name: subnetName
+        name: functionSubnetName
         properties: {
           addressPrefix: '10.10.1.0/24'
-          privateEndpointNetworkPolicies: 'Disabled'
+          delegations: [
+            {
+              name: 'functionAppDelegation'
+              properties: {
+                serviceName: 'Microsoft.Web/serverFarms'
+              }
+            }
+          ]
+          serviceEndpoints: [
+            {
+              service: 'Microsoft.KeyVault'
+            }
+            {
+              service: 'Microsoft.Storage'
+            }
+          ]
+        }
+      }
+      {
+        name: webSubnetName
+        properties: {
+          addressPrefix: '10.10.2.0/24'
+          delegations: [
+            {
+              name: 'webAppDelegation'
+              properties: {
+                serviceName: 'Microsoft.Web/serverFarms'
+              }
+            }
+          ]
+          serviceEndpoints: [
+            {
+              service: 'Microsoft.KeyVault'
+            }
+          ]
         }
       }
     ]
@@ -83,11 +118,14 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     enableRbacAuthorization: true
     publicNetworkAccess: 'Enabled'
     networkAcls: {
-      defaultAction: 'Allow'
+      defaultAction: 'Deny'
       bypass: 'None'
       virtualNetworkRules: [
         {
           id: vnet.properties.subnets[0].id
+        }
+        {
+          id: vnet.properties.subnets[1].id
         }
       ]
     }
@@ -138,6 +176,7 @@ module webApp 'webapp.bicep' = {
     functionApiBaseUrl: 'https://${functionApp.outputs.functionAppName}.azurewebsites.net'
     authClientId: authClientId
     functionApiKey: functionApiKey
+    subnetId: vnet.properties.subnets[1].id
   }
 }
 
