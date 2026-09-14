@@ -95,6 +95,11 @@ namespace RISM.DemoFunctions
                     // call the extractbarcode function with the bloburiresult in the body
                     resultText.AppendLine(await CallExtractBarcodeFunction(blobUriResult));
                 }
+                catch (FormatException ex)
+                {
+                    _logger.LogWarning(ex, "Invalid image data.");
+                    return new BadRequestObjectResult("Invalid image data.");
+                }
                 catch (RequestFailedException ex)
                 {
                     _logger.LogError(ex, "Azure service request failed.");
@@ -108,7 +113,7 @@ namespace RISM.DemoFunctions
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Image processing failed.");
-                    return new BadRequestObjectResult("Invalid image data.");
+                    return new ObjectResult("Image processing failed.") { StatusCode = StatusCodes.Status500InternalServerError };
                 }
                 finally
                 {

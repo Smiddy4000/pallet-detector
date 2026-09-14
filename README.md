@@ -64,6 +64,10 @@ loads service credentials from Azure Key Vault. Before deployment:
    them from source does not revoke the exposed credentials.
 4. Restrict the Azure Maps credential to the required APIs and deployment network.
 
+The Function App uses an EP1 Elastic Premium plan because VNet integration is
+required for access to network-restricted Azure services; account for this plan
+when estimating deployment costs.
+
 ### Usage
 
 - The main landing page displays the camera feed and allows interaction with Azure Open AI Services.
