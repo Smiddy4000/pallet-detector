@@ -6,6 +6,8 @@ param appInsightsId string
 param keyVaultUri string
 param functionApiBaseUrl string
 param authClientId string
+@secure()
+param functionApiKey string
 
 var webAppName = 'palletdetector${environmentName}webapp'
 var planName = 'palletdetector${environmentName}webplan'
@@ -36,6 +38,7 @@ resource webApp 'Microsoft.Web/sites@2024-04-01' = {
   }
   properties: {
     serverFarmId: plan.id
+    keyVaultReferenceIdentity: identityId
     siteConfig: {
       appSettings: [
         {
@@ -48,7 +51,7 @@ resource webApp 'Microsoft.Web/sites@2024-04-01' = {
         }
         {
           name: 'FUNCTION_API_KEY'
-          value: '@Microsoft.KeyVault(SecretUri=${keyVaultUri}secrets/FunctionApiKey)'
+          value: functionApiKey
         }
         {
           name: 'AZURE_MAPS_KEY'
@@ -59,7 +62,7 @@ resource webApp 'Microsoft.Web/sites@2024-04-01' = {
       scmType: 'None'
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
-      publicNetworkAccess: 'Disabled'
+      publicNetworkAccess: 'Enabled'
     }
     httpsOnly: true
   }

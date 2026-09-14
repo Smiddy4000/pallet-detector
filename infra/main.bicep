@@ -7,6 +7,9 @@ param location string
 param resourceGroupName string
 @description('Client ID of the Microsoft Entra application used by App Service authentication.')
 param authClientId string
+@secure()
+@description('Shared host key used to authenticate calls to the Function App.')
+param functionApiKey string
 
 // Resource naming convention
 var resourcePrefix = 'palletdetector'
@@ -78,9 +81,9 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
       name: 'standard'
     }
     enableRbacAuthorization: true
-    publicNetworkAccess: 'Disabled'
+    publicNetworkAccess: 'Enabled'
     networkAcls: {
-      defaultAction: 'Deny'
+      defaultAction: 'Allow'
       bypass: 'None'
       virtualNetworkRules: [
         {
@@ -120,6 +123,7 @@ module functionApp 'functionapp.bicep' = {
     appInsightsId: appInsights.properties.InstrumentationKey
     keyVaultUri: keyVault.properties.vaultUri
     subnetId: vnet.properties.subnets[0].id
+    functionApiKey: functionApiKey
   }
 }
 
@@ -133,6 +137,7 @@ module webApp 'webapp.bicep' = {
     keyVaultUri: keyVault.properties.vaultUri
     functionApiBaseUrl: 'https://${functionApp.outputs.functionAppName}.azurewebsites.net'
     authClientId: authClientId
+    functionApiKey: functionApiKey
   }
 }
 

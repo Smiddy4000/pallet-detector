@@ -100,6 +100,11 @@ namespace RISM.DemoFunctions
                     _logger.LogError(ex, "Azure service request failed.");
                     return new ObjectResult("Image processing failed.") { StatusCode = StatusCodes.Status502BadGateway };
                 }
+                catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+                {
+                    _logger.LogError(ex, "Barcode extraction request failed.");
+                    return new ObjectResult("Image processing failed.") { StatusCode = StatusCodes.Status502BadGateway };
+                }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Image processing failed.");
@@ -128,6 +133,10 @@ namespace RISM.DemoFunctions
                     throw new FormatException("Unsupported image format.");
                 }
                 string encodedImage = base64Image[(separatorIndex + 1)..];
+                if (string.IsNullOrWhiteSpace(encodedImage))
+                {
+                    throw new FormatException("Image data is empty.");
+                }
                 if (encodedImage.Length > (MAX_IMAGE_BYTES * 4 / 3) + 4)
                 {
                     throw new FormatException("Image is too large.");

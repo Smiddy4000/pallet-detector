@@ -57,7 +57,9 @@ The infrastructure enables Microsoft Entra authentication for the web app and
 loads service credentials from Azure Key Vault. Before deployment:
 
 1. Set `AUTH_CLIENT_ID` to the App Service authentication application client ID.
-2. Create `FunctionApiKey` and `AzureMapsKey` secrets in the deployed Key Vault.
+2. Set `FUNCTION_API_KEY` to a rotated Function host key value and create the
+   `AzureMapsKey` secret in the deployed Key Vault. The deployment provisions
+   the same Function host key used by both applications.
 3. Rotate the function and Azure Maps keys that were previously committed. Removing
    them from source does not revoke the exposed credentials.
 4. Restrict the Azure Maps credential to the required APIs and deployment network.

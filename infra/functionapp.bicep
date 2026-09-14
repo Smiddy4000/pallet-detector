@@ -5,6 +5,8 @@ param identityId string
 param appInsightsId string
 param keyVaultUri string
 param subnetId string
+@secure()
+param functionApiKey string
 
 var functionAppName = 'palletdetector${environmentName}api'
 var storageAccountName = 'palletdetector${environmentName}funcsa'
@@ -59,6 +61,7 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
   }
   properties: {
     serverFarmId: plan.id
+    keyVaultReferenceIdentity: identityId
     siteConfig: {
       appSettings: [
         {
@@ -83,16 +86,28 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
         }
         {
           name: 'FUNCTION_API_KEY'
-          value: '@Microsoft.KeyVault(SecretUri=${keyVaultUri}secrets/FunctionApiKey)'
+          value: functionApiKey
+        }
+        {
+          name: 'EXTRACT_FUNCTION_URI'
+          value: 'https://${functionAppName}.azurewebsites.net/api/ExtractBarcode'
         }
       ]
       vnetRouteAllEnabled: true
       scmType: 'None'
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
-      publicNetworkAccess: 'Disabled'
+      publicNetworkAccess: 'Enabled'
     }
     httpsOnly: true
+  }
+}
+
+resource functionApiHostKey 'Microsoft.Web/sites/host/functionKeys@2024-04-01' = {
+  name: '${functionApp.name}/default/pallet-detector'
+  properties: {
+    name: 'pallet-detector'
+    value: functionApiKey
   }
 }
 

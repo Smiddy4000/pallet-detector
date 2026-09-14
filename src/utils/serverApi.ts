@@ -9,7 +9,7 @@ export function requiredEnvironmentVariable(name: string): string {
 }
 
 export function isAuthenticated(req: NextApiRequest): boolean {
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV === 'development') {
         return true;
     }
 

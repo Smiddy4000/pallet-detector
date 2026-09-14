@@ -10,9 +10,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const lat = Number(Array.isArray(req.query.lat) ? req.query.lat[0] : req.query.lat);
-    const lon = Number(Array.isArray(req.query.lon) ? req.query.lon[0] : req.query.lon);
-    if (!Number.isFinite(lat) || !Number.isFinite(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+    const latValue = Array.isArray(req.query.lat) ? req.query.lat[0] : req.query.lat;
+    const lonValue = Array.isArray(req.query.lon) ? req.query.lon[0] : req.query.lon;
+    const lat = Number(latValue);
+    const lon = Number(lonValue);
+    if (!latValue?.trim() || !lonValue?.trim() || !Number.isFinite(lat) || !Number.isFinite(lon)
+        || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
         return res.status(400).json({ error: 'Invalid coordinates' });
     }
 
