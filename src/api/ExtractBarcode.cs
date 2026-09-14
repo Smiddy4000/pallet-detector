@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
-using Azure;
 using Azure.AI.FormRecognizer.DocumentAnalysis;
 using System.Text;
 using Microsoft.Extensions.Configuration;
@@ -24,7 +23,7 @@ namespace api
         }
 
         [Function("ExtractBarcode")]
-        public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequest req)
+        public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequest req)
         {
             _logger.LogInformation("Entering Extract Barcode function.");
 
@@ -69,7 +68,8 @@ namespace api
             }
             catch (Exception ex)
             {
-                return new BadRequestObjectResult(ex.Message);
+                _logger.LogError(ex, "Barcode extraction failed.");
+                return new ObjectResult("Barcode extraction failed.") { StatusCode = StatusCodes.Status502BadGateway };
             }
         }
     }

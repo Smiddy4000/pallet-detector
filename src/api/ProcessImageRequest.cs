@@ -27,7 +27,9 @@ namespace RISM.DemoFunctions
         private readonly string _visionEndpoint;
         private readonly string _visionApiKey;
         private const string QUESTION = "what can you tell me about this image?";
+        private const int MAX_IMAGE_BYTES = 5 * 1024 * 1024;
         private readonly string _extractBarcodeFunctionUrl;
+        private readonly string _functionApiKey;
         private readonly HttpClient _httpClient;
         #endregion
 
@@ -47,6 +49,7 @@ namespace RISM.DemoFunctions
             _visionEndpoint = config["VISION_ENDPOINT"] ?? string.Empty;
             _visionApiKey = config["VISION_APIKEY"] ?? string.Empty;
             _extractBarcodeFunctionUrl = config["EXTRACT_FUNCTION_URI"] ?? string.Empty;
+            _functionApiKey = config["FUNCTION_API_KEY"] ?? string.Empty;
             _httpClient = new HttpClient();
         }
         /// <summary>
@@ -55,7 +58,7 @@ namespace RISM.DemoFunctions
         /// <param name="req">The HTTP request.</param>
         /// <returns>An <see cref="IActionResult"/> representing the result of the operation.</returns>
         [Function("ProcessImageRequest")]
-        public async Task<IActionResult> RunAsync([HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequest req)
+        public async Task<IActionResult> RunAsync([HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequest req)
         {
             _logger.LogInformation("C# HTTP trigger function processed a request.");
 
@@ -92,13 +95,25 @@ namespace RISM.DemoFunctions
                     // call the extractbarcode function with the bloburiresult in the body
                     resultText.AppendLine(await CallExtractBarcodeFunction(blobUriResult));
                 }
+                catch (FormatException ex)
+                {
+                    _logger.LogWarning(ex, "Invalid image data.");
+                    return new BadRequestObjectResult("Invalid image data.");
+                }
                 catch (RequestFailedException ex)
                 {
-                    return new BadRequestObjectResult(ex.Message);
+                    _logger.LogError(ex, "Azure service request failed.");
+                    return new ObjectResult("Image processing failed.") { StatusCode = StatusCodes.Status502BadGateway };
+                }
+                catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+                {
+                    _logger.LogError(ex, "Barcode extraction request failed.");
+                    return new ObjectResult("Image processing failed.") { StatusCode = StatusCodes.Status502BadGateway };
                 }
                 catch (Exception ex)
                 {
-                    return new BadRequestObjectResult(ex.Message);
+                    _logger.LogError(ex, "Image processing failed.");
+                    return new ObjectResult("Image processing failed.") { StatusCode = StatusCodes.Status500InternalServerError };
                 }
                 finally
                 {
@@ -117,7 +132,25 @@ namespace RISM.DemoFunctions
         {
             try
             {
-                byte[] imageBytes = Convert.FromBase64String(base64Image.Split(",".ToCharArray())[1]);
+                int separatorIndex = base64Image.IndexOf(',');
+                if (!base64Image.StartsWith("data:image/jpeg;base64,", StringComparison.OrdinalIgnoreCase) || separatorIndex < 0)
+                {
+                    throw new FormatException("Unsupported image format.");
+                }
+                string encodedImage = base64Image[(separatorIndex + 1)..];
+                if (string.IsNullOrWhiteSpace(encodedImage))
+                {
+                    throw new FormatException("Image data is empty.");
+                }
+                if (encodedImage.Length > (MAX_IMAGE_BYTES * 4 / 3) + 4)
+                {
+                    throw new FormatException("Image is too large.");
+                }
+                byte[] imageBytes = Convert.FromBase64String(encodedImage);
+                if (imageBytes.Length > MAX_IMAGE_BYTES)
+                {
+                    throw new FormatException("Image is too large.");
+                }
                 var storageAccount = new BlobServiceClient(new Uri(_storageConnectionString));
                 var containerClient = storageAccount.GetBlobContainerClient("images");
                 var fileName = Guid.NewGuid().ToString() + ".jpeg";
@@ -142,7 +175,12 @@ namespace RISM.DemoFunctions
             var requestBody = JsonConvert.SerializeObject(new { uri = blobUri.ToString() });
             var content = new StringContent(requestBody, Encoding.UTF8, "application/json");
 
-            var response = await _httpClient.PostAsync(_extractBarcodeFunctionUrl, content);
+            using var request = new HttpRequestMessage(HttpMethod.Post, _extractBarcodeFunctionUrl)
+            {
+                Content = content
+            };
+            request.Headers.Add("x-functions-key", _functionApiKey);
+            var response = await _httpClient.SendAsync(request);
             response.EnsureSuccessStatusCode();
 
             return await response.Content.ReadAsStringAsync();

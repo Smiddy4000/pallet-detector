@@ -72,7 +72,7 @@ const CameraComponent: React.FC<CameraComponentProps> = ({ onResult }) => {
 
     const sendPhotoToAPI = async (photo: string) => {
         setProgress(25);
-        const response = await fetch('https://pallet-detector-api.azurewebsites.net/api/ProcessImageRequest', {
+        const response = await fetch('/api/process-image', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -80,8 +80,13 @@ const CameraComponent: React.FC<CameraComponentProps> = ({ onResult }) => {
             body: JSON.stringify({ photo }),
         });
         setProgress(50);
-        const data = await response.json();
-        console.log(data);
+        if (!response.ok) {
+            throw new Error('Image processing failed');
+        }
+        const data: unknown = await response.json();
+        if (typeof data !== 'string') {
+            throw new Error('Unexpected image processing response');
+        }
         setResponseText(data || 'No response message');
         setProgress(75);
         // create a regular expression to grab the barcode from the response
@@ -90,11 +95,14 @@ const CameraComponent: React.FC<CameraComponentProps> = ({ onResult }) => {
         const match = data.match(barcodeRegex);
         // extract the barcode value from the match
         const barcode = match ? match[1] : '';
-        console.log(barcode);
-        // using the GetLocation Azure function to get the address bases on the barcode value
-        const responseLocation = await fetch(`https://pallet-detector-api.azurewebsites.net/api/GetLocation?code=ByAFQlcEdJ56ZC2JFkaYeyQNl7OcJuaFHVNAR7hpo-R3AzFu6e54GQ%3D%3D&id=${barcode}`);
+        if (!barcode) {
+            throw new Error('No barcode found');
+        }
+        const responseLocation = await fetch(`/api/location?id=${encodeURIComponent(barcode)}`);
+        if (!responseLocation.ok) {
+            throw new Error('Location lookup failed');
+        }
         const dataLocation = await responseLocation.json();
-        console.log(dataLocation);
         var isValid = false; // Assuming the API response contains an isValid field
         if (dataLocation.address === address) {
             isValid = true;
@@ -123,7 +131,10 @@ const CameraComponent: React.FC<CameraComponentProps> = ({ onResult }) => {
         const lon = position.coords.longitude;
 
         // Use Azure Maps API to convert coordinates to a text address
-        const response = await fetch(`https://atlas.microsoft.com/search/address/reverse/json?api-version=1.0&query=${lat},${lon}&subscription-key=BiGLDrNOuP5J5eYiMdaeAUB6hRlOGVlGSrZ6yhQGpEw8I4QI4xO3JQQJ99ALAC8vTInJ0deGAAAgAZMP3bLr`);
+        const response = await fetch(`/api/reverse-geocode?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`);
+        if (!response.ok) {
+            throw new Error('Unable to retrieve address');
+        }
         const data = await response.json();
 
         if (data.addresses && data.addresses.length > 0) {

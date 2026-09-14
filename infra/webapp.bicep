@@ -3,6 +3,12 @@ param environmentName string
 param location string
 param identityId string
 param appInsightsId string
+param keyVaultUri string
+param functionApiBaseUrl string
+param authClientId string
+@secure()
+param functionApiKey string
+param subnetId string
 
 var webAppName = 'palletdetector${environmentName}webapp'
 var planName = 'palletdetector${environmentName}webplan'
@@ -33,6 +39,8 @@ resource webApp 'Microsoft.Web/sites@2024-04-01' = {
   }
   properties: {
     serverFarmId: plan.id
+    keyVaultReferenceIdentity: identityId
+    virtualNetworkSubnetId: subnetId
     siteConfig: {
       appSettings: [
         {
@@ -40,17 +48,58 @@ resource webApp 'Microsoft.Web/sites@2024-04-01' = {
           value: appInsightsId
         }
         {
-          name: 'ApiBaseUrl'
-          value: 'https://<api-url>'
+          name: 'FUNCTION_API_BASE_URL'
+          value: functionApiBaseUrl
+        }
+        {
+          name: 'FUNCTION_API_KEY'
+          value: functionApiKey
+        }
+        {
+          name: 'AZURE_MAPS_KEY'
+          value: '@Microsoft.KeyVault(SecretUri=${keyVaultUri}secrets/AzureMapsKey)'
         }
       ]
       vnetRouteAllEnabled: true
       scmType: 'None'
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
-      publicNetworkAccess: 'Disabled'
+      publicNetworkAccess: 'Enabled'
     }
     httpsOnly: true
+  }
+}
+
+resource authSettings 'Microsoft.Web/sites/config@2024-04-01' = {
+  parent: webApp
+  name: 'authsettingsV2'
+  properties: {
+    platform: {
+      enabled: true
+      runtimeVersion: '~1'
+    }
+    globalValidation: {
+      requireAuthentication: true
+      unauthenticatedClientAction: 'RedirectToLoginPage'
+      redirectToProvider: 'azureActiveDirectory'
+    }
+    identityProviders: {
+      azureActiveDirectory: {
+        enabled: true
+        registration: {
+          clientId: authClientId
+          openIdIssuer: '${environment().authentication.loginEndpoint}${tenant().tenantId}/v2.0'
+        }
+        validation: {
+          allowedAudiences: [
+            'api://${authClientId}'
+          ]
+        }
+      }
+    }
+    httpSettings: {
+      requireHttps: true
+    }
   }
 }
 

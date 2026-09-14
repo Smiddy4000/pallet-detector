@@ -5,6 +5,8 @@ param identityId string
 param appInsightsId string
 param keyVaultUri string
 param subnetId string
+@secure()
+param functionApiKey string
 
 var functionAppName = 'palletdetector${environmentName}api'
 var storageAccountName = 'palletdetector${environmentName}funcsa'
@@ -37,8 +39,8 @@ resource plan 'Microsoft.Web/serverfarms@2024-04-01' = {
   name: planName
   location: location
   sku: {
-    name: 'Y1'
-    tier: 'Dynamic'
+    name: 'EP1'
+    tier: 'ElasticPremium'
   }
   kind: 'functionapp'
 }
@@ -59,6 +61,8 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
   }
   properties: {
     serverFarmId: plan.id
+    keyVaultReferenceIdentity: identityId
+    virtualNetworkSubnetId: subnetId
     siteConfig: {
       appSettings: [
         {
@@ -81,14 +85,36 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
           name: 'CosmosDbConnectionString'
           value: '@Microsoft.KeyVault(SecretUri=${keyVaultUri}secrets/CosmosDbConnectionString)'
         }
+        {
+          name: 'FUNCTION_API_KEY'
+          value: functionApiKey
+        }
+        {
+          name: 'EXTRACT_FUNCTION_URI'
+          value: 'https://${functionAppName}.azurewebsites.net/api/ExtractBarcode'
+        }
       ]
       vnetRouteAllEnabled: true
       scmType: 'None'
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
-      publicNetworkAccess: 'Disabled'
+      publicNetworkAccess: 'Enabled'
     }
     httpsOnly: true
+  }
+}
+
+resource functionHost 'Microsoft.Web/sites/host@2024-04-01' existing = {
+  parent: functionApp
+  name: 'default'
+}
+
+resource functionApiHostKey 'Microsoft.Web/sites/host/functionKeys@2024-04-01' = {
+  parent: functionHost
+  name: 'pallet-detector'
+  properties: {
+    name: 'pallet-detector'
+    value: functionApiKey
   }
 }
 

@@ -11,6 +11,12 @@
     },
     "resourceGroupName": {
       "value": "rg-${AZURE_ENV_NAME}"
+    },
+    "authClientId": {
+      "value": "${AUTH_CLIENT_ID}"
+    },
+    "functionApiKey": {
+      "value": "${FUNCTION_API_KEY}"
     }
   }
 }

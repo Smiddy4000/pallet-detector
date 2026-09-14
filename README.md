@@ -1,4 +1,4 @@
-# My Next.js App
+# Pallet Detector
 
 This project is a web application built with Next.js that utilizes the device camera and integrates with Azure Open AI Services.
 
@@ -14,21 +14,21 @@ To get started with this project, follow the instructions below.
 
 ### Prerequisites
 
-- Node.js (version 14 or later)
-- npm (version 6 or later)
+- Node.js 20.9 or later
+- npm 10 or later
 
 ### Installation
 
 1. Clone the repository:
 
    ```
-   git clone https://github.com/yourusername/my-nextjs-app.git
+   git clone https://github.com/Smiddy4000/pallet-detector.git
    ```
 
 2. Navigate to the project directory:
 
    ```
-   cd my-nextjs-app
+   cd pallet-detector
    ```
 
 3. Install the dependencies:
@@ -36,6 +36,10 @@ To get started with this project, follow the instructions below.
    ```
    npm install
    ```
+
+4. Copy `.env.example` to `.env.local` and provide the backend Function App URL,
+   a function key, and an Azure Maps key. These values are server-only and must
+   never use a `NEXT_PUBLIC_` prefix.
 
 ### Running the Application
 
@@ -46,6 +50,23 @@ npm run dev
 ```
 
 Open your browser and navigate to `http://localhost:3000` to view the application.
+
+## Production security
+
+The infrastructure enables Microsoft Entra authentication for the web app and
+loads service credentials from Azure Key Vault. Before deployment:
+
+1. Set `AUTH_CLIENT_ID` to the App Service authentication application client ID.
+2. Set `FUNCTION_API_KEY` to a rotated Function host key value and create the
+   `AzureMapsKey` secret in the deployed Key Vault. The deployment provisions
+   the same Function host key used by both applications.
+3. Rotate the function and Azure Maps keys that were previously committed. Removing
+   them from source does not revoke the exposed credentials.
+4. Restrict the Azure Maps credential to the required APIs and deployment network.
+
+The Function App uses an EP1 Elastic Premium plan because VNet integration is
+required for access to network-restricted Azure services; account for this plan
+when estimating deployment costs.
 
 ### Usage
 

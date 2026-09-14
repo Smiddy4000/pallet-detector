@@ -5,6 +5,11 @@
 param environmentName string
 param location string
 param resourceGroupName string
+@description('Client ID of the Microsoft Entra application used by App Service authentication.')
+param authClientId string
+@secure()
+@description('Shared host key used to authenticate calls to the Function App.')
+param functionApiKey string
 
 // Resource naming convention
 var resourcePrefix = 'palletdetector'
@@ -13,7 +18,8 @@ var keyVaultName = '${resourcePrefix}${environmentName}kv'
 var logAnalyticsName = '${resourcePrefix}${environmentName}log'
 var appInsightsName = '${resourcePrefix}${environmentName}ai'
 var vnetName = '${resourcePrefix}${environmentName}vnet'
-var subnetName = '${resourcePrefix}${environmentName}subnet'
+var functionSubnetName = '${resourcePrefix}${environmentName}funcsubnet'
+var webSubnetName = '${resourcePrefix}${environmentName}websubnet'
 var identityName = '${resourcePrefix}${environmentName}id'
 
 // VNET and subnet for private endpoints
@@ -26,10 +32,44 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-09-01' = {
     }
     subnets: [
       {
-        name: subnetName
+        name: functionSubnetName
         properties: {
           addressPrefix: '10.10.1.0/24'
-          privateEndpointNetworkPolicies: 'Disabled'
+          delegations: [
+            {
+              name: 'functionAppDelegation'
+              properties: {
+                serviceName: 'Microsoft.Web/serverFarms'
+              }
+            }
+          ]
+          serviceEndpoints: [
+            {
+              service: 'Microsoft.KeyVault'
+            }
+            {
+              service: 'Microsoft.Storage'
+            }
+          ]
+        }
+      }
+      {
+        name: webSubnetName
+        properties: {
+          addressPrefix: '10.10.2.0/24'
+          delegations: [
+            {
+              name: 'webAppDelegation'
+              properties: {
+                serviceName: 'Microsoft.Web/serverFarms'
+              }
+            }
+          ]
+          serviceEndpoints: [
+            {
+              service: 'Microsoft.KeyVault'
+            }
+          ]
         }
       }
     ]
@@ -76,13 +116,16 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
       name: 'standard'
     }
     enableRbacAuthorization: true
-    publicNetworkAccess: 'Disabled'
+    publicNetworkAccess: 'Enabled'
     networkAcls: {
       defaultAction: 'Deny'
       bypass: 'None'
       virtualNetworkRules: [
         {
           id: vnet.properties.subnets[0].id
+        }
+        {
+          id: vnet.properties.subnets[1].id
         }
       ]
     }
@@ -92,6 +135,19 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     enableSoftDelete: true
     enablePurgeProtection: true
     softDeleteRetentionInDays: 30
+  }
+}
+
+resource keyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(keyVault.id, identity.id, 'Key Vault Secrets User')
+  scope: keyVault
+  properties: {
+    principalId: identity.properties.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId(
+      'Microsoft.Authorization/roleDefinitions',
+      '4633458b-17de-408a-b874-0445c86b69e6'
+    )
   }
 }
 
@@ -105,6 +161,7 @@ module functionApp 'functionapp.bicep' = {
     appInsightsId: appInsights.properties.InstrumentationKey
     keyVaultUri: keyVault.properties.vaultUri
     subnetId: vnet.properties.subnets[0].id
+    functionApiKey: functionApiKey
   }
 }
 
@@ -115,8 +172,11 @@ module webApp 'webapp.bicep' = {
     location: location
     identityId: identity.id
     appInsightsId: appInsights.properties.InstrumentationKey
-    //keyVaultUri: keyVault.properties.vaultUri
-    //subnetId: vnet.properties.subnets[0].id
+    keyVaultUri: keyVault.properties.vaultUri
+    functionApiBaseUrl: 'https://${functionApp.outputs.functionAppName}.azurewebsites.net'
+    authClientId: authClientId
+    functionApiKey: functionApiKey
+    subnetId: vnet.properties.subnets[1].id
   }
 }
 
