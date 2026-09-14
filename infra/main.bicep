@@ -5,6 +5,8 @@
 param environmentName string
 param location string
 param resourceGroupName string
+@description('Client ID of the Microsoft Entra application used by App Service authentication.')
+param authClientId string
 
 // Resource naming convention
 var resourcePrefix = 'palletdetector'
@@ -95,6 +97,19 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
   }
 }
 
+resource keyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(keyVault.id, identity.id, 'Key Vault Secrets User')
+  scope: keyVault
+  properties: {
+    principalId: identity.properties.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId(
+      'Microsoft.Authorization/roleDefinitions',
+      '4633458b-17de-408a-b874-0445c86b69e6'
+    )
+  }
+}
+
 // Reference modules for zero trust deployment
 module functionApp 'functionapp.bicep' = {
   name: 'functionApp'
@@ -115,8 +130,9 @@ module webApp 'webapp.bicep' = {
     location: location
     identityId: identity.id
     appInsightsId: appInsights.properties.InstrumentationKey
-    //keyVaultUri: keyVault.properties.vaultUri
-    //subnetId: vnet.properties.subnets[0].id
+    keyVaultUri: keyVault.properties.vaultUri
+    functionApiBaseUrl: 'https://${functionApp.outputs.functionAppName}.azurewebsites.net'
+    authClientId: authClientId
   }
 }
 

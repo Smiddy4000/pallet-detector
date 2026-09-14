@@ -24,7 +24,7 @@ namespace api
         }
 
         [Function("ProcessVoice")]
-        public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequest req)
+        public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequest req)
         {
             _logger.LogInformation("C# HTTP trigger function processed a request.");
             try
@@ -37,7 +37,8 @@ namespace api
             }
             catch (Exception ex)
             {
-                return new BadRequestObjectResult(ex.Message);
+                _logger.LogError(ex, "Speech synthesis failed.");
+                return new ObjectResult("Speech synthesis failed.") { StatusCode = StatusCodes.Status502BadGateway };
             }
             if (!string.IsNullOrEmpty(_audioData))
             {

@@ -81,6 +81,10 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
           name: 'CosmosDbConnectionString'
           value: '@Microsoft.KeyVault(SecretUri=${keyVaultUri}secrets/CosmosDbConnectionString)'
         }
+        {
+          name: 'FUNCTION_API_KEY'
+          value: '@Microsoft.KeyVault(SecretUri=${keyVaultUri}secrets/FunctionApiKey)'
+        }
       ]
       vnetRouteAllEnabled: true
       scmType: 'None'
